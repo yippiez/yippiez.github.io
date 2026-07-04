@@ -51,19 +51,17 @@
 
     /* landing prompt */
     #landing{position:fixed; inset:0; z-index:30; display:flex; align-items:center; justify-content:center; pointer-events:none}
-    .prompt{pointer-events:auto; width:min(560px,92vw); background:rgba(255,255,255,.72); backdrop-filter:blur(16px);
-      -webkit-backdrop-filter:blur(16px); border:1px solid #dfe2e8; border-radius:18px; padding:22px 22px 18px;
-      box-shadow:0 20px 60px rgba(20,22,30,.18); font-family:system-ui,sans-serif}
-    .ptitle{font-size:18px; font-weight:700; color:#1c1c22}
-    .psub{font-size:13px; color:#6b7280; margin:2px 0 14px}
+    .prompt{width:min(600px,92vw); display:flex; flex-direction:column; gap:12px; align-items:center;
+      pointer-events:none; font-family:system-ui,sans-serif}
+    .prompt input,.prompt textarea,.prompt button{pointer-events:auto}
     .prompt textarea{width:100%; min-height:120px; font-family:ui-monospace,"SF Mono",monospace; font-size:13px;
-      padding:11px 12px; border:1px solid #dfe2e8; border-radius:10px; resize:vertical; background:#fff; color:#1c1c22; margin-bottom:10px; line-height:1.5}
-    .prow{display:flex; gap:8px; margin-bottom:10px}
-    .prompt input{flex:1; min-width:0; font:inherit; font-size:14px; padding:10px 12px; border:1px solid #dfe2e8; border-radius:10px; background:#fff; color:#1c1c22}
-    #pgo{flex:0 0 auto; border:0; background:#2563eb; color:#fff; font:inherit; font-weight:700; font-size:14px; padding:10px 18px; border-radius:10px; cursor:pointer}
+      padding:11px 12px; border:1px solid #dfe2e8; border-radius:10px; resize:vertical; background:#fff; color:#1c1c22; line-height:1.5;
+      box-shadow:0 4px 16px rgba(20,22,30,.1)}
+    .prow{display:flex; gap:8px; width:100%}
+    .prompt input{flex:1; min-width:0; font:inherit; font-size:14px; padding:10px 12px; border:1px solid #dfe2e8; border-radius:10px; background:#fff; color:#1c1c22; box-shadow:0 2px 10px rgba(20,22,30,.08)}
+    #pgo{flex:0 0 auto; border:0; background:#2563eb; color:#fff; font:inherit; font-weight:700; font-size:14px; padding:10px 18px; border-radius:10px; cursor:pointer; box-shadow:0 2px 10px rgba(37,99,235,.3)}
     #pgo:hover{background:#1d4fd0}
-    .pexlbl{font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#9aa1ad; margin:6px 0 8px}
-    .chips{display:flex; flex-wrap:wrap; gap:7px}
+    .chips{display:flex; flex-wrap:wrap; gap:7px; justify-content:center}
     .chips button{border:1px solid #e2e4ea; background:#fff; font:inherit; font-size:12.5px; color:#33373f; padding:6px 12px; border-radius:999px; cursor:pointer}
     .chips button:hover{border-color:#2563eb; color:#2563eb}
   </style>
@@ -313,14 +311,11 @@ difference() {
       const esc=s=>s.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
       document.body.insertAdjacentHTML('beforeend', `
         <div id="landing"><div class="prompt">
-          <div class="ptitle">OpenSCAD viewer</div>
-          <div class="psub">Enter OpenSCAD code, or pick an example.</div>
           <textarea id="pcode" spellcheck="false" placeholder="$fn=48; difference(){ cube([40,40,10],center=true); cylinder(h=20,r=8,center=true); }"></textarea>
           <div class="prow">
             <input id="ptitle" placeholder="title (optional)" autocomplete="off">
-            <button id="pgo">Render →</button>
+            <button id="pgo">Render</button>
           </div>
-          <div class="pexlbl">Examples</div>
           <div class="chips">${EX.map(o=>`<button data-src="${esc(o.src)}" data-title="${o.name}">${o.name}</button>`).join('')}</div>
         </div></div>`);
       const go=(code,title)=>{ const q=new URLSearchParams(); q.set('src',code); if(title) q.set('title',title); location.search=q.toString(); };
