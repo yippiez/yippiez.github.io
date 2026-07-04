@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>molecule</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; overflow: hidden; }
+    body { background: #e9ecf2; font-family: system-ui, sans-serif; }
+    #view { position: fixed; inset: 0; }
+    #view canvas { display: block; }
+    .overlay { position: fixed; top: 24px; left: 24px; z-index: 10; }
+
+    /* --- tree folder overlay component --- */
+    .ocard{ --ts:#2563eb; --ts-soft:#e6edfb;
+      position:relative; font-family:system-ui,sans-serif; color:#1c1c22; width:max-content }
+    .otree-edges{position:absolute; top:0; left:0; pointer-events:none; overflow:visible; z-index:0}
+    .ohead{ display:inline-flex; align-items:center; gap:.45rem; padding:.34rem .55rem; margin-bottom:.6rem;
+      line-height:1; background:var(--ts-soft); border:1px solid var(--ts); border-radius:6px; text-decoration:none; cursor:pointer }
+    .otitle{font-size:.8rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--ts); position:relative; top:.055em}
+    .ogo{display:inline-flex; color:var(--ts); opacity:.6}
+    .ohead:hover .ogo{opacity:1}
+    .obody{padding-left:.4rem}
+    .okids{list-style:none; margin:0; padding-left:1.5rem}
+    .onode{position:relative}
+    .orow{position:relative; z-index:1; display:flex; align-items:center; padding:.34rem 0}
+    .ocontent{ min-width:0; display:inline-flex; flex-wrap:wrap; align-items:center; gap:.3rem .5rem;
+      padding:.36rem .6rem; line-height:1; background:#fff; border:1px solid #e6e6eb; border-radius:8px;
+      box-shadow:0 1px 2px rgba(20,22,30,.06); cursor:default;
+      transition:box-shadow .15s, transform .15s, border-color .15s; }
+    .ocontent.el:hover{ transform:translateX(2px); box-shadow:0 4px 12px rgba(20,22,30,.14); border-color:var(--dot,#c9ccd4); }
+    .oval{font-weight:700; color:#1c1c22; font-variant-numeric:tabular-nums; position:relative; top:.055em}
+    .olbl{color:#6b6b76; font-size:.78rem; position:relative; top:.055em}
+    .swatch{width:9px;height:9px;border-radius:3px;background:var(--dot);flex:0 0 auto}
+    .bar{display:block}.track{fill:#eceef2}
+  </style>
+  <script type="importmap">
+  { "imports": { "three": "../vendor/three.module.js" } }
+  </script>
+</head>
+<body>
+  <div id="view"></div>
+
+  <div class="overlay">
+    <div class="ocard">
+      <a class="ohead" href="#" id="head">
+        <span class="otitle">Ethanol</span>
+        <span class="ogo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+      </a>
+      <div class="obody okids">
+        <div class="onode"><div class="orow"><div class="ocontent"><span class="oval">C₂H₆O</span><span class="olbl">Formula</span></div></div></div>
+        <div class="onode"><div class="orow"><div class="ocontent"><span class="oval">46.07</span><span class="olbl">g/mol</span>
+          <svg class="bar" width="54" height="8"><rect class="track" width="54" height="8" rx="4"/><rect width="24.9" height="8" rx="4" fill="#2563eb"/></svg></div></div></div>
+        <div class="onode"><div class="orow"><div class="ocontent"><span class="oval">CCO</span><span class="olbl">SMILES</span></div></div></div>
+        <div class="onode">
+          <div class="orow"><div class="ocontent"><span class="oval">9</span><span class="olbl">Atoms</span>
+            <svg class="bar" width="72" height="9"><rect x="0" width="16" height="9" rx="2" fill="#8b909a"/><rect x="17" width="8" height="9" rx="2" fill="#e0463c"/><rect x="26" width="46" height="9" rx="2" fill="#c9ccd4"/></svg></div></div>
+          <div class="okids">
+            <div class="onode"><div class="orow"><div class="ocontent el" data-el="C" style="--dot:#8b909a"><span class="swatch"></span><span class="oval">2</span><span class="olbl">Carbon</span>
+              <svg class="bar" width="52" height="8"><rect class="track" width="52" height="8" rx="4"/><rect width="17" height="8" rx="4" fill="#8b909a"/></svg></div></div></div>
+            <div class="onode"><div class="orow"><div class="ocontent el" data-el="O" style="--dot:#e0463c"><span class="swatch"></span><span class="oval">1</span><span class="olbl">Oxygen</span>
+              <svg class="bar" width="52" height="8"><rect class="track" width="52" height="8" rx="4"/><rect width="8.6" height="8" rx="4" fill="#e0463c"/></svg></div></div></div>
+            <div class="onode"><div class="orow"><div class="ocontent el" data-el="H" style="--dot:#c9ccd4"><span class="swatch"></span><span class="oval">6</span><span class="olbl">Hydrogen</span>
+              <svg class="bar" width="52" height="8"><rect class="track" width="52" height="8" rx="4"/><rect width="52" height="8" rx="4" fill="#c9ccd4"/></svg></div></div></div>
+          </div>
+        </div>
+        <div class="onode">
+          <div class="orow"><div class="ocontent"><span class="oval">3</span><span class="olbl">Properties</span></div></div>
+          <div class="okids">
+            <div class="onode"><div class="orow"><div class="ocontent"><span class="oval">1</span><span class="olbl">H-bond donors</span></div></div></div>
+            <div class="onode"><div class="orow"><div class="ocontent"><span class="oval">1</span><span class="olbl">H-bond acceptors</span></div></div></div>
+            <div class="onode"><div class="orow"><div class="ocontent"><span class="oval">−0.14</span><span class="olbl">LogP</span>
+              <svg class="bar" width="64" height="12"><rect class="track" y="4" width="64" height="4" rx="2"/><line x1="32" y1="1" x2="32" y2="11" stroke="#c9ccd4" stroke-width="1"/><circle cx="30.5" cy="6" r="4" fill="#2563eb"/></svg></div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from '../vendor/OrbitControls.js';
+
+    const EL = { C:{color:0x8b909a,r:0.40}, O:{color:0xe0463c,r:0.44}, H:{color:0xf2f4f7,r:0.24} };
+    const atoms = [
+      { e:'C', p:[-1.25,-0.20, 0.00] }, { e:'C', p:[ 0.05, 0.55, 0.00] }, { e:'O', p:[ 1.22,-0.30, 0.00] },
+      { e:'H', p:[-2.10, 0.45, 0.30] }, { e:'H', p:[-1.35,-0.85, 0.88] }, { e:'H', p:[-1.42,-0.72,-0.90] },
+      { e:'H', p:[ 0.18, 1.25, 0.86] }, { e:'H', p:[ 0.12, 1.16,-0.86] }, { e:'H', p:[ 1.98, 0.26, 0.12] },
+    ];
+    const bonds = [[0,1],[1,2],[2,8],[0,3],[0,4],[0,5],[1,6],[1,7]];
+
+    const view = document.getElementById('view');
+    const renderer = new THREE.WebGLRenderer({ antialias:true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+    renderer.setSize(innerWidth, innerHeight);
+    view.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xe9ecf2);
+    const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 100);
+    camera.position.set(3.6, 2.4, 5.2);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true; controls.dampingFactor = 0.08;
+    controls.autoRotate = true; controls.autoRotateSpeed = 1.4;
+
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x9098a8, 1.15));
+    const dir = new THREE.DirectionalLight(0xffffff, 1.6); dir.position.set(4,6,5); scene.add(dir);
+    const dir2 = new THREE.DirectionalLight(0xffffff, 0.5); dir2.position.set(-4,-2,-3); scene.add(dir2);
+    const grid = new THREE.GridHelper(24, 24, 0xc3c7d0, 0xd4d7de); grid.position.y = -2.6; scene.add(grid);
+
+    const byEl = { C:[], O:[], H:[] };
+    const root = new THREE.Group(); scene.add(root);
+    const sphereGeo = new THREE.SphereGeometry(1, 48, 32);
+    for (const a of atoms) {
+      const s = EL[a.e];
+      const mat = new THREE.MeshStandardMaterial({ color:s.color, metalness:0.15, roughness:0.35 });
+      const m = new THREE.Mesh(sphereGeo, mat);
+      m.scale.setScalar(s.r); m.position.set(...a.p);
+      root.add(m); byEl[a.e].push(m);
+    }
+    const bondMat = new THREE.MeshStandardMaterial({ color:0x9aa0aa, metalness:0.1, roughness:0.6 });
+    const cylGeo = new THREE.CylinderGeometry(0.09, 0.09, 1, 24);
+    const up = new THREE.Vector3(0,1,0);
+    for (const [i,j] of bonds) {
+      const a = new THREE.Vector3(...atoms[i].p), b = new THREE.Vector3(...atoms[j].p);
+      const mid = a.clone().add(b).multiplyScalar(0.5), len = a.distanceTo(b);
+      const m = new THREE.Mesh(cylGeo, bondMat);
+      m.position.copy(mid); m.scale.y = len;
+      m.quaternion.setFromUnitVectors(up, b.clone().sub(a).normalize());
+      root.add(m);
+    }
+
+    let hl = null;
+    document.querySelectorAll('.ocontent.el').forEach(el=>{
+      el.addEventListener('mouseenter', ()=> hl = el.dataset.el);
+      el.addEventListener('mouseleave', ()=> hl = null);
+    });
+    document.getElementById('head').addEventListener('click', e=>{ e.preventDefault(); controls.autoRotate = !controls.autoRotate; });
+
+    addEventListener('resize', ()=>{
+      camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+    });
+
+    function tick(t){
+      for (const e in byEl) for (const m of byEl[e]) {
+        const on = hl === e;
+        m.material.emissive.setHex(on ? 0x2563eb : 0x000000);
+        m.material.emissiveIntensity = on ? (0.35 + 0.25*Math.sin(t*0.006)) : 0;
+        const tgt = on ? EL[e].r*1.12 : EL[e].r;
+        m.scale.setScalar(m.scale.x + (tgt - m.scale.x)*0.2);
+      }
+      controls.update();
+      renderer.render(scene, camera);
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  </script>
+
+  <script>
+  (function () {
+    var SVGNS='http://www.w3.org/2000/svg';
+    function kids(el,sel){return Array.prototype.filter.call(el.children,function(c){return c.matches(sel);});}
+    function drawCard(card){
+      var body=card.querySelector('.obody'),title=card.querySelector('.ohead');
+      if(!body||!title)return;
+      var svg=card.querySelector(':scope > .otree-edges');
+      if(!svg){svg=document.createElementNS(SVGNS,'svg');svg.setAttribute('class','otree-edges');card.insertBefore(svg,card.firstChild);}
+      var cr=card.getBoundingClientRect();
+      function chipOf(n){return n.querySelector(':scope > .orow > .ocontent');}
+      function landing(n){var r=chipOf(n).getBoundingClientRect();return{x:r.left-cr.left,y:r.top-cr.top+r.height/2};}
+      function spring(el){var r=el.getBoundingClientRect();return{x:r.left-cr.left+11,y:r.bottom-cr.top};}
+      var d='';
+      function link(a,container){var ch=kids(container,'.onode');if(!ch.length)return;var pts=ch.map(landing);
+        d+='M'+a.x+','+a.y+' V'+pts[pts.length-1].y;
+        pts.forEach(function(c){var r=Math.min(8,Math.max(0,c.y-a.y),c.x-a.x);
+          d+=' M'+a.x+','+(c.y-r)+' Q'+a.x+','+c.y+' '+(a.x+r)+','+c.y+' H'+c.x;});}
+      link(spring(title),body);
+      card.querySelectorAll('.onode').forEach(function(node){var sub=node.querySelector(':scope > .okids');if(sub)link(spring(chipOf(node)),sub);});
+      svg.setAttribute('width',card.offsetWidth);svg.setAttribute('height',card.offsetHeight);
+      svg.innerHTML='<path d="'+d+'" fill="none" stroke="#c3c6cf" stroke-width="1.5" stroke-linecap="round"/>';
+    }
+    function drawAll(){document.querySelectorAll('.ocard').forEach(drawCard);}
+    if(document.readyState!=='loading')drawAll(); else document.addEventListener('DOMContentLoaded',drawAll);
+    addEventListener('load',drawAll); addEventListener('resize',drawAll);
+  })();
+  </script>
+</body>
+</html>
