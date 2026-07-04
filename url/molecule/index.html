@@ -10,10 +10,15 @@
     body { background: #e9ecf2; font-family: system-ui, sans-serif; user-select: none; -webkit-user-select: none; }
     #view { position: fixed; inset: 0; }
     #view canvas { display: block; }
-    .overlay { position: fixed; top: 24px; left: 24px; z-index: 10; max-height: calc(100vh - 48px); overflow: auto; }
 
-    .ocard{ --ts:#2563eb; --ts-soft:#e6edfb;
-      position:relative; font-family:system-ui,sans-serif; color:#1c1c22; width:max-content }
+    /* full width, vertical-only scroll, no visible scrollbar, click-through except chips */
+    .overlay { position: fixed; top: 24px; left: 24px; right: 24px; z-index: 10;
+      max-height: calc(100vh - 48px); overflow-y: auto; overflow-x: hidden;
+      scrollbar-width: none; -ms-overflow-style: none; pointer-events: none; }
+    .overlay::-webkit-scrollbar { width: 0; height: 0; display: none; }
+    .ohead, .ocontent { pointer-events: auto; }
+
+    .ocard{ --ts:#2563eb; --ts-soft:#e6edfb; position:relative; font-family:system-ui,sans-serif; color:#1c1c22; width:max-content; max-width:100% }
     .otree-edges{position:absolute; top:0; left:0; pointer-events:none; overflow:visible; z-index:0}
     .ohead{ display:inline-flex; align-items:center; gap:.45rem; padding:.24rem .5rem; margin-bottom:.5rem;
       line-height:1; background:var(--ts-soft); border:1px solid var(--ts); border-radius:6px; text-decoration:none; cursor:default }
@@ -24,11 +29,10 @@
     .orow{position:relative; z-index:1; display:flex; align-items:center; padding:.26rem 0}
     .ocontent{ min-width:0; display:inline-flex; flex-wrap:wrap; align-items:center; gap:.28rem .45rem;
       padding:.3rem .55rem; line-height:1; background:#fff; border:1px solid #e6e6eb; border-radius:8px;
-      box-shadow:0 1px 2px rgba(20,22,30,.06);
-      transition:box-shadow .15s, transform .15s, border-color .15s; }
+      box-shadow:0 1px 2px rgba(20,22,30,.06); transition:box-shadow .15s, transform .15s, border-color .15s; }
     .ocontent.el:hover{ transform:translateX(2px); box-shadow:0 4px 12px rgba(20,22,30,.14); border-color:var(--dot,#c9ccd4); }
     .oval{font-weight:700; color:#1c1c22; font-variant-numeric:tabular-nums; position:relative; top:.04em}
-    .oval.mono{font-family:ui-monospace,"SF Mono",monospace; font-size:.8rem; font-weight:600}
+    .oval.mono{font-family:ui-monospace,"SF Mono",monospace; font-size:.8rem; font-weight:600; word-break:break-all}
     .olbl{color:#6b6b76; font-size:.74rem; position:relative; top:.04em}
     .swatch{width:9px;height:9px;border-radius:3px;background:var(--dot);flex:0 0 auto}
     .bar{display:block}.track{fill:#eceef2}
@@ -44,6 +48,32 @@
     .tip .tt{display:block; font-weight:700; color:#1c1c22; margin-bottom:4px; font-size:12.5px}
     #err{position:fixed; top:24px; left:24px; z-index:20; background:#fff; border:1px solid #e0463c; color:#b3261e;
       padding:10px 14px; border-radius:10px; font-size:13px; display:none; font-family:ui-monospace,monospace}
+
+    /* landing prompt */
+    #landing{position:fixed; inset:0; z-index:30; display:flex; align-items:center; justify-content:center; pointer-events:none}
+    .prompt{pointer-events:auto; width:min(520px,92vw); background:rgba(255,255,255,.72); backdrop-filter:blur(16px);
+      -webkit-backdrop-filter:blur(16px); border:1px solid #dfe2e8; border-radius:18px; padding:22px 22px 18px;
+      box-shadow:0 20px 60px rgba(20,22,30,.18); font-family:system-ui,sans-serif}
+    .ptitle{font-size:18px; font-weight:700; color:#1c1c22}
+    .psub{font-size:13px; color:#6b7280; margin:2px 0 14px}
+    .seg{display:inline-flex; background:#eef0f4; border-radius:9px; padding:3px; margin-bottom:10px}
+    .seg button{border:0; background:transparent; font:inherit; font-size:12.5px; font-weight:600; color:#6b7280;
+      padding:5px 12px; border-radius:7px; cursor:pointer}
+    .seg button.on{background:#fff; color:#2563eb; box-shadow:0 1px 2px rgba(20,22,30,.1)}
+    .prow{display:flex; gap:8px; margin-bottom:10px}
+    .prompt input{flex:1; min-width:0; font:inherit; font-size:14px; padding:10px 12px; border:1px solid #dfe2e8;
+      border-radius:10px; background:#fff; color:#1c1c22; font-family:ui-monospace,monospace}
+    .prompt input#ptitle{flex:0 0 34%; font-family:system-ui,sans-serif}
+    #pgo{flex:0 0 auto; border:0; background:#2563eb; color:#fff; font:inherit; font-weight:700; font-size:14px;
+      padding:10px 16px; border-radius:10px; cursor:pointer}
+    #pgo:hover{background:#1d4fd0}
+    .pexlbl{font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#9aa1ad; margin:6px 0 8px}
+    .chips{display:flex; flex-wrap:wrap; gap:7px}
+    .chips button{border:1px solid #e2e4ea; background:#fff; font:inherit; font-size:12.5px; color:#33373f;
+      padding:6px 11px; border-radius:999px; cursor:pointer; display:inline-flex; align-items:center; gap:6px}
+    .chips button:hover{border-color:#2563eb; color:#2563eb}
+    .chips .dot{width:8px;height:8px;border-radius:50%}
+    .chips .sf{border-style:dashed}
   </style>
   <script src="../vendor/RDKit_minimal.js"></script>
   <script type="importmap">{ "imports": { "three": "../vendor/three.module.js" } }</script>
@@ -65,19 +95,15 @@
     const DEF = {c:0xc07fbf,r:0.46};
     const elInfo = e => ELEM[e] || DEF;
     const DOT = e => '#' + elInfo(e).c.toString(16).padStart(6,'0');
-
-    // hand-built 3D coords for the default (ethanol) so the landing view looks nice
     const ETHANOL = {
       atoms:[ {e:'C',p:[-1.25,-0.20,0]},{e:'C',p:[0.05,0.55,0]},{e:'O',p:[1.22,-0.30,0]},
         {e:'H',p:[-2.10,0.45,0.30]},{e:'H',p:[-1.35,-0.85,0.88]},{e:'H',p:[-1.42,-0.72,-0.90]},
         {e:'H',p:[0.18,1.25,0.86]},{e:'H',p:[0.12,1.16,-0.86]},{e:'H',p:[1.98,0.26,0.12]} ],
       bonds:[[0,1,1],[1,2,1],[2,8,1],[0,3,1],[0,4,1],[0,5,1],[1,6,1],[1,7,1]]
     };
-
     const sub = s => String(s).replace(/[0-9]/g, d => '₀₁₂₃₄₅₆₇₈₉'[+d]);
     function hillFormula(counts){
-      const keys = Object.keys(counts);
-      const order = [];
+      const keys = Object.keys(counts); const order = [];
       if (counts.C){ order.push('C'); if(counts.H) order.push('H'); }
       keys.filter(k=>k!=='C'&&!(counts.C&&k==='H')).sort().forEach(k=>order.push(k));
       return order.map(k => k + (counts[k]>1 ? sub(counts[k]) : '')).join('');
@@ -87,42 +113,15 @@
       const na = parseInt(cnt.slice(0,3)), nb = parseInt(cnt.slice(3,6));
       const atoms=[], bonds=[];
       for(let i=0;i<na;i++){ const s=L[4+i];
-        atoms.push({ e:s.slice(31,34).trim(),
-          p:[parseFloat(s.slice(0,10)), parseFloat(s.slice(10,20)), parseFloat(s.slice(20,30))] }); }
+        atoms.push({ e:s.slice(31,34).trim(), p:[parseFloat(s.slice(0,10)),parseFloat(s.slice(10,20)),parseFloat(s.slice(20,30))] }); }
       for(let i=0;i<nb;i++){ const s=L[4+na+i];
         bonds.push([parseInt(s.slice(0,3))-1, parseInt(s.slice(3,6))-1, parseInt(s.slice(6,9))]); }
       return {atoms,bonds};
     }
-
     const showErr = m => { const e=document.getElementById('err'); e.textContent=m; e.style.display='block'; };
+    const waitFor = async fn => { for(let i=0;i<200;i++){ if(fn()) return; await new Promise(r=>setTimeout(r,25)); } };
 
-    // ---- boot RDKit ----
-    async function waitFor(fn){ for(let i=0;i<200;i++){ if(fn()) return; await new Promise(r=>setTimeout(r,25)); } }
-    await waitFor(()=>window.initRDKitModule);
-    const RDKit = await window.initRDKitModule({ locateFile: f => '../vendor/'+f });
-
-    const params = new URLSearchParams(location.search);
-    const smiles = params.get('smiles') || 'CCO';
-
-    let mol = RDKit.get_mol(smiles);
-    if (!mol || !mol.is_valid()){ showErr('Invalid SMILES: '+smiles); throw new Error('bad smiles'); }
-    const d = JSON.parse(mol.get_descriptors());
-    const canonical = mol.get_smiles();
-    let inchikey = '—';
-    try { inchikey = RDKit.get_inchikey_for_inchi(mol.get_inchi()); } catch(_){}
-
-    // geometry: hand coords for ethanol, else RDKit connectivity + 2D layout
-    let geom;
-    if (canonical === 'CCO') geom = ETHANOL;
-    else {
-      const mh = RDKit.get_mol(smiles); mh.add_hs_in_place(); mh.set_new_coords();
-      geom = parseMolblock(mh.get_molblock()); mh.delete();
-    }
-    // element counts (with H) for formula + breakdown
-    const counts = {}; geom.atoms.forEach(a => counts[a.e]=(counts[a.e]||0)+1);
-    const formula = hillFormula(counts);
-
-    /* =================== 3D scene =================== */
+    /* ---------- shared scene ---------- */
     const view = document.getElementById('view');
     const renderer = new THREE.WebGLRenderer({ antialias:true });
     renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setSize(innerWidth, innerHeight);
@@ -134,185 +133,11 @@
     scene.add(new THREE.HemisphereLight(0xffffff, 0x9098a8, 1.15));
     const dl = new THREE.DirectionalLight(0xffffff,1.6); dl.position.set(4,6,5); scene.add(dl);
     const dl2 = new THREE.DirectionalLight(0xffffff,0.5); dl2.position.set(-4,-2,-3); scene.add(dl2);
-
-    // center + scale
-    const c = new THREE.Vector3();
-    geom.atoms.forEach(a => c.add(new THREE.Vector3(...a.p)));
-    c.multiplyScalar(1/geom.atoms.length);
-    const P = geom.atoms.map(a => new THREE.Vector3(...a.p).sub(c));
-    let radius = 1; P.forEach(p => radius = Math.max(radius, p.length()));
-
-    const byEl = {};
-    const root = new THREE.Group(); scene.add(root);
-    const sphereGeo = new THREE.SphereGeometry(1, 40, 28);
-    geom.atoms.forEach((a,i) => {
-      const info = elInfo(a.e);
-      const mat = new THREE.MeshStandardMaterial({ color:info.c, metalness:0.15, roughness:0.35 });
-      const m = new THREE.Mesh(sphereGeo, mat);
-      m.scale.setScalar(info.r); m.position.copy(P[i]);
-      root.add(m); (byEl[a.e] = byEl[a.e] || []).push(m);
-    });
-    const bondMat = new THREE.MeshStandardMaterial({ color:0x9aa0aa, metalness:0.1, roughness:0.6 });
-    const cylGeo = new THREE.CylinderGeometry(0.085,0.085,1,20);
-    const up = new THREE.Vector3(0,1,0);
-    geom.bonds.forEach(([i,j]) => {
-      const a=P[i], b=P[j], mid=a.clone().add(b).multiplyScalar(0.5), len=a.distanceTo(b);
-      const m = new THREE.Mesh(cylGeo, bondMat);
-      m.position.copy(mid); m.scale.y = len; m.quaternion.setFromUnitVectors(up, b.clone().sub(a).normalize());
-      root.add(m);
-    });
-    const grid = new THREE.GridHelper(radius*6, 24, 0xc3c7d0, 0xd4d7de);
-    grid.position.y = -radius - 0.6; scene.add(grid);
-    const dist = radius / Math.sin(Math.PI/8) * 1.15;
-    camera.position.set(dist*0.5, dist*0.42, dist*0.85); controls.target.set(0,0,0);
+    let grid = new THREE.GridHelper(16, 20, 0xc3c7d0, 0xd4d7de); grid.position.y = -2.6; scene.add(grid);
+    camera.position.set(4.5, 3, 6.5); controls.target.set(0,0,0);
     addEventListener('resize', ()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); });
 
-    /* =================== info overlay =================== */
-    const TIP = {
-      formula:['Molecular formula','The count of each element in one molecule. A compact fingerprint of composition — quick to read, though different isomers can share one.'],
-      smiles:['Canonical SMILES','A plain-text encoding of the molecular graph. RDKit’s canonical form gives every molecule one unique string you can store, search, and share.'],
-      inchi:['InChIKey','A fixed-length hashed identifier derived from the IUPAC InChI. Great as a database key — two identical structures always hash to the same key.'],
-      exact:['Exact mass','Mass using the most abundant isotope of each atom, in daltons. This is what a high-resolution mass spectrometer actually measures.'],
-      mw:['Molar mass','Average molecular weight (using natural isotope abundances), in g/mol. Used to convert between grams and moles when weighing or reacting.'],
-      hbd:['Hydrogen-bond donors','Groups with an H on N or O that can donate a hydrogen bond. More donors usually means better water solubility but poorer membrane permeability (Lipinski).'],
-      hba:['Hydrogen-bond acceptors','N or O atoms with lone pairs that can accept a hydrogen bond. With donors, they shape solubility, binding, and drug-likeness.'],
-      rot:['Rotatable bonds','Single, non-ring bonds between heavy atoms — a measure of molecular flexibility. Fewer rotatable bonds often means better oral bioavailability.'],
-      tpsa:['Topological polar surface area','The surface area (Å²) contributed by polar N/O atoms. Predicts passive membrane permeability; >140 Å² molecules rarely cross the gut wall.'],
-      logp:['LogP (lipophilicity)','Crippen’s calculated octanol–water partition coefficient (log scale). Positive = fat-loving, negative = water-loving; it drives absorption and distribution.'],
-      rings:['Rings','The number of ring systems (SSSR). Rings add rigidity and are central to most drug scaffolds.'],
-      csp3:['Fraction Csp³','The share of carbons that are sp³ (tetrahedral) rather than flat/aromatic. Higher values correlate with better solubility and clinical success rates.'],
-      heavy:['Heavy atoms','All atoms except hydrogen. A simple size measure and the basis of ligand efficiency metrics.'],
-      atoms:['Atom count','Total number of atoms including hydrogens — a rough proxy for molecular size.'],
-      elem:e=>[e, ({H:'The most abundant atom in most organic molecules; caps free valences and takes part in hydrogen bonding.',C:'The backbone element of organic molecules; its four-bond versatility builds chains and rings.',O:'Adds polarity and hydrogen-bonding; oxygen groups strongly raise water solubility and reactivity.',N:'Basic, hydrogen-bonding, and found in most drugs; carries lone pairs that bind metals and receptors.',S:'Larger and more polarizable; appears in many drugs, cofactors, and cross-links.'}[e] || ('Count of '+e+' atoms in the molecule.'))]
-    };
-    const barSVG = (frac,color,w=54)=>`<svg class="bar" width="${w}" height="8"><rect class="track" width="${w}" height="8" rx="4"/><rect width="${Math.max(2,Math.min(1,frac)*w).toFixed(1)}" height="8" rx="4" fill="${color}"/></svg>`;
-    const gaugeSVG = v=>{const W=64,x=Math.max(0,Math.min(1,(v+5)/10))*W;return `<svg class="bar" width="${W}" height="12"><rect class="track" y="4" width="${W}" height="4" rx="2"/><line x1="${W/2}" y1="1" x2="${W/2}" y2="11" stroke="#c9ccd4" stroke-width="1"/><circle cx="${x.toFixed(1)}" cy="6" r="4" fill="#2563eb"/></svg>`;};
-
-    function chip(opts){
-      const c = document.createElement('div'); c.className='ocontent'+(opts.el?' el':'');
-      if(opts.el){ c.dataset.el=opts.el; c.style.setProperty('--dot',opts.dot); }
-      if(opts.swatch){ const s=document.createElement('span'); s.className='swatch'; if(!opts.el) c.style.setProperty('--dot',opts.dot); c.appendChild(s); }
-      const v=document.createElement('span'); v.className='oval'+(opts.mono?' mono':''); v.textContent=opts.val; c.appendChild(v);
-      if(opts.label){ const l=document.createElement('span'); l.className='olbl'; l.textContent=opts.label; c.appendChild(l); }
-      if(opts.svg){ const w=document.createElement('span'); w.innerHTML=opts.svg; c.appendChild(w.firstChild); }
-      if(opts.tip){ c.dataset.tt=opts.tip[0]; c.dataset.td=opts.tip[1]; c.style.cursor='help'; }
-      return c;
-    }
-    const nodeOf = ch => { const n=document.createElement('div'); n.className='onode'; const r=document.createElement('div'); r.className='orow'; r.appendChild(ch); n.appendChild(r); return n; };
-    function groupOf(parentChip, childChips){ const n=nodeOf(parentChip); const k=document.createElement('div'); k.className='okids'; childChips.forEach(ch=>k.appendChild(nodeOf(ch))); n.appendChild(k); return n; }
-
-    const num = (x,p=2)=> (Math.round(x*10**p)/10**p).toString();
-
-    const tree = document.getElementById('tree');
-    tree.innerHTML = '<div class="ohead"><span class="otitle">'+formula+'</span></div>';
-    const body = document.createElement('div'); body.className='obody okids';
-
-    const elName = {H:'Hydrogen',C:'Carbon',O:'Oxygen',N:'Nitrogen',S:'Sulfur',P:'Phosphorus',F:'Fluorine',Cl:'Chlorine',Br:'Bromine',I:'Iodine',B:'Boron'};
-    const elKeys = Object.keys(counts).sort((a,b)=>counts[b]-counts[a]);
-    const maxCount = Math.max(...elKeys.map(k=>counts[k]));
-
-    // deep, mostly-collapsed spec
-    const SPEC = [
-      { val:'Identity', children:[
-        { val:formula, label:'Formula', tip:TIP.formula },
-        { val:canonical, mono:true, label:'SMILES', tip:TIP.smiles },
-        { val:inchikey, mono:true, label:'InChIKey', tip:TIP.inchi },
-        { val:'Mass', children:[
-          { val:num(d.exactmw,4), label:'Exact mass', tip:TIP.exact },
-          { val:num(d.amw,2), label:'g/mol', tip:TIP.mw, svg:barSVG(d.amw/500,'#2563eb') },
-        ]},
-      ]},
-      { val:String(geom.atoms.length), label:'Atoms', tip:TIP.atoms, children:
-        elKeys.map(e=>({ el:e, dot:DOT(e), swatch:true, val:String(counts[e]), label:elName[e]||e,
-          tip:TIP.elem(e), svg:barSVG(counts[e]/maxCount, DOT(e)) }))
-      },
-      { val:'Druglikeness', children:[
-        { val:'Lipinski Ro5', tip:['Lipinski’s rule of five','A rough oral-druglikeness filter: MW ≤ 500, LogP ≤ 5, ≤ 5 H-bond donors, ≤ 10 acceptors. Two or more violations predicts poor absorption.'], children:[
-          { val:num(d.amw,1), label:'MW ≤ 500', tip:TIP.mw },
-          { val:num(d.CrippenClogP,2), label:'LogP ≤ 5', tip:TIP.logp, svg:gaugeSVG(d.CrippenClogP) },
-          { val:String(d.NumHBD), label:'HBD ≤ 5', tip:TIP.hbd },
-          { val:String(d.NumHBA), label:'HBA ≤ 10', tip:TIP.hba },
-        ]},
-        { val:num(d.tpsa,1), label:'TPSA Å²', tip:TIP.tpsa, svg:barSVG(d.tpsa/140,'#7a4ff2') },
-        { val:String(d.NumRotatableBonds), label:'Rotatable bonds', tip:TIP.rot },
-        { val:num(d.FractionCSP3,2), label:'Fraction Csp³', tip:TIP.csp3, svg:barSVG(d.FractionCSP3,'#4fae9a') },
-        { val:String(d.NumHeavyAtoms), label:'Heavy atoms', tip:TIP.heavy },
-      ]},
-      { val:'Rings & stereo', children:[
-        { val:String(d.NumRings), label:'Rings', tip:TIP.rings },
-        { val:String(d.NumAromaticRings), label:'Aromatic rings', tip:['Aromatic rings','Flat, conjugated rings (like benzene). They add rigidity and π-stacking, but too many hurt solubility.'] },
-        { val:String(d.NumAliphaticRings), label:'Aliphatic rings', tip:['Aliphatic rings','Non-aromatic (saturated or partly saturated) rings — they add three-dimensional character.'] },
-        { val:String(d.NumHeterocycles), label:'Heterocycles', tip:['Heterocycles','Rings containing at least one non-carbon atom (N, O, S). Extremely common in drug scaffolds.'] },
-        { val:String(d.NumAtomStereoCenters), label:'Stereocenters', tip:['Stereocenters','Atoms whose 3-D arrangement isn’t superimposable on its mirror image; each one doubles the possible stereoisomers.'] },
-        { val:String(d.NumSpiroAtoms), label:'Spiro atoms', tip:['Spiro atoms','A single atom shared between two rings joined at one point — a compact way to add 3-D shape.'] },
-        { val:String(d.NumBridgeheadAtoms), label:'Bridgehead atoms', tip:['Bridgehead atoms','Atoms shared by two rings that share more than one bond (fused or bridged systems).'] },
-      ]},
-      { val:'Descriptors', children:[
-        { val:'Crippen', children:[
-          { val:num(d.CrippenClogP,3), label:'LogP', tip:TIP.logp },
-          { val:num(d.CrippenMR,2), label:'Molar refractivity', tip:['Molar refractivity','Crippen’s MR — roughly molecular volume × polarizability. Tracks dispersion binding and steric bulk.'] },
-        ]},
-        { val:'Surface', children:[
-          { val:num(d.tpsa,1), label:'TPSA Å²', tip:TIP.tpsa },
-          { val:num(d.labuteASA,1), label:'Labute ASA', tip:['Labute ASA','An approximate accessible surface area (Å²) summed from atomic contributions.'] },
-        ]},
-        { val:'Shape κ', tip:['Kappa shape indices','Kier’s κ indices capture how linear vs. branched vs. cyclic a molecule is.'], children:[
-          { val:num(d.kappa1,2), label:'κ1' }, { val:num(d.kappa2,2), label:'κ2' }, { val:num(d.kappa3,2), label:'κ3' },
-          { val:num(d.hallKierAlpha,2), label:'Hall–Kier α' },
-        ]},
-        { val:'Connectivity χ', tip:['Chi connectivity indices','Molecular-graph descriptors encoding branching and valence, widely used in QSAR models.'], children:[
-          { val:num(d.chi0v,2), label:'χ0v' }, { val:num(d.chi1v,2), label:'χ1v' },
-          { val:num(d.chi0n,2), label:'χ0n' }, { val:num(d.chi1n,2), label:'χ1n' },
-          { val:num(d.Phi,2), label:'Φ flexibility' },
-        ]},
-      ]},
-    ];
-
-    function build(spec){
-      const n = nodeOf(chip(spec));
-      if(spec.children && spec.children.length){
-        const k=document.createElement('div'); k.className='okids';
-        spec.children.forEach(cs=> k.appendChild(build(cs)));
-        n.appendChild(k);
-      }
-      return n;
-    }
-    SPEC.forEach(cs=> body.appendChild(build(cs)));
-    tree.appendChild(body);
-    mol.delete();
-
-    // collapse-by-default with clickable carets
-    const CARET='<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
-    body.querySelectorAll('.onode').forEach(node=>{
-      const sub = node.querySelector(':scope > .okids');
-      const c = node.querySelector(':scope > .orow > .ocontent');
-      if(!sub || !c) return;
-      c.classList.add('parent');
-      const caret=document.createElement('span'); caret.className='ocaret'; caret.innerHTML=CARET;
-      c.insertBefore(caret, c.firstChild);
-      node.classList.add('collapsed');
-      c.addEventListener('click', ()=>{ node.classList.toggle('collapsed'); window.__drawTree && window.__drawTree(); });
-    });
-
-    // tooltips
-    const tip = document.createElement('div'); tip.className='tip'; document.body.appendChild(tip);
-    tree.querySelectorAll('.ocontent[data-tt]').forEach(el=>{
-      el.addEventListener('mouseenter', ()=>{
-        tip.innerHTML = '<span class="tt">'+el.dataset.tt+'</span>'+el.dataset.td;
-        const r = el.getBoundingClientRect();
-        tip.style.left = (r.right+12)+'px'; tip.style.top = Math.min(r.top, innerHeight-150)+'px';
-        tip.classList.add('on');
-      });
-      el.addEventListener('mouseleave', ()=> tip.classList.remove('on'));
-    });
-    // element hover -> highlight atoms
-    let hl = null;
-    tree.querySelectorAll('.ocontent.el').forEach(el=>{
-      el.addEventListener('mouseenter', ()=> hl = el.dataset.el);
-      el.addEventListener('mouseleave', ()=> hl = null);
-    });
-    if (window.__drawTree) window.__drawTree();
-
+    const byEl = {}; let hl = null;
     function tick(t){
       controls.update();
       for (const e in byEl) for (const m of byEl[e]){
@@ -326,6 +151,202 @@
       requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);
+
+    /* ---------- route ---------- */
+    const params = new URLSearchParams(location.search);
+    const pSmiles = params.get('smiles'), pSelfies = params.get('selfies'), pTitle = params.get('title');
+    if (!pSmiles && !pSelfies) landing();
+    else runViewer().catch(e=>showErr(String(e && e.message || e)));
+
+    /* ---------- landing ---------- */
+    function landing(){
+      const SM = [
+        {name:'Ethanol', smiles:'CCO'}, {name:'Benzene', smiles:'c1ccccc1'},
+        {name:'Caffeine', smiles:'CN1C=NC2=C1C(=O)N(C(=O)N2C)C'}, {name:'Aspirin', smiles:'CC(=O)Oc1ccccc1C(=O)O'},
+        {name:'Paracetamol', smiles:'CC(=O)Nc1ccc(O)cc1'}, {name:'Glucose', smiles:'OCC1OC(O)C(O)C(O)C1O'},
+        {name:'Nicotine', smiles:'CN1CCCC1c1cccnc1'},
+      ];
+      const SF = [
+        {name:'Benzene', selfies:'[C][=C][C][=C][C][=C][Ring1][=Branch1]'},
+        {name:'Caffeine', selfies:'[C][N][C][=N][C][=C][Ring1][Branch1][C][=Branch1][C][=O][N][Branch1][#Branch1][C][=Branch1][C][=O][N][C][C]'},
+      ];
+      const chip = (o,kind)=>`<button class="${kind==='selfies'?'sf':''}" data-kind="${kind}" data-val="${o[kind]}" data-title="${o.name}"><span class="dot" style="background:${kind==='selfies'?'#7a4ff2':'#2563eb'}"></span>${o.name}</button>`;
+      document.body.insertAdjacentHTML('beforeend', `
+        <div id="landing"><div class="prompt">
+          <div class="ptitle">Molecule viewer</div>
+          <div class="psub">Enter a SMILES or SELFIES string, or pick an example.</div>
+          <div class="seg"><button data-mode="smiles" class="on">SMILES</button><button data-mode="selfies">SELFIES</button></div>
+          <div class="prow">
+            <input id="pin" placeholder="e.g. CCO" autocomplete="off" spellcheck="false">
+            <input id="ptitle" placeholder="title (optional)" autocomplete="off">
+            <button id="pgo">View →</button>
+          </div>
+          <div class="pexlbl">SMILES examples</div>
+          <div class="chips">${SM.map(o=>chip(o,'smiles')).join('')}</div>
+          <div class="pexlbl" style="margin-top:12px">SELFIES examples</div>
+          <div class="chips">${SF.map(o=>chip(o,'selfies')).join('')}</div>
+        </div></div>`);
+      let mode = 'smiles';
+      const pin = document.getElementById('pin');
+      document.querySelectorAll('.seg button').forEach(b=> b.addEventListener('click', ()=>{
+        document.querySelectorAll('.seg button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+        mode = b.dataset.mode; pin.placeholder = mode==='selfies' ? 'e.g. [C][C][O]' : 'e.g. CCO';
+      }));
+      const go = (kind,val,title)=>{ const q=new URLSearchParams(); q.set(kind,val); if(title) q.set('title',title); location.search=q.toString(); };
+      document.getElementById('pgo').addEventListener('click', ()=>{ const v=pin.value.trim(); if(v) go(mode, v, document.getElementById('ptitle').value.trim()); });
+      pin.addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('pgo').click(); });
+      document.querySelectorAll('.chips button').forEach(b=> b.addEventListener('click', ()=> go(b.dataset.kind, b.dataset.val, b.dataset.title)));
+    }
+
+    /* ---------- viewer ---------- */
+    async function runViewer(){
+      let smiles = pSmiles;
+      if (!smiles && pSelfies){ const { decode } = await import('../vendor/selfies.module.js'); smiles = decode(pSelfies); }
+      await waitFor(()=>window.initRDKitModule);
+      const RDKit = await window.initRDKitModule({ locateFile: f => '../vendor/'+f });
+      let mol = RDKit.get_mol(smiles);
+      if (!mol || !mol.is_valid()){ showErr('Invalid structure: '+smiles); return; }
+      const d = JSON.parse(mol.get_descriptors());
+      const canonical = mol.get_smiles();
+      let inchikey='—'; try { inchikey = RDKit.get_inchikey_for_inchi(mol.get_inchi()); } catch(_){}
+
+      let geom;
+      if (canonical === 'CCO') geom = ETHANOL;
+      else { const mh = RDKit.get_mol(smiles); mh.add_hs_in_place(); mh.set_new_coords(); geom = parseMolblock(mh.get_molblock()); mh.delete(); }
+      const counts = {}; geom.atoms.forEach(a => counts[a.e]=(counts[a.e]||0)+1);
+      const formula = hillFormula(counts);
+
+      // molecule into scene
+      const c = new THREE.Vector3(); geom.atoms.forEach(a=>c.add(new THREE.Vector3(...a.p))); c.multiplyScalar(1/geom.atoms.length);
+      const P = geom.atoms.map(a=>new THREE.Vector3(...a.p).sub(c));
+      let radius=1; P.forEach(p=>radius=Math.max(radius,p.length()));
+      const root=new THREE.Group(); scene.add(root);
+      const sg=new THREE.SphereGeometry(1,40,28);
+      geom.atoms.forEach((a,i)=>{ const info=elInfo(a.e);
+        const m=new THREE.Mesh(sg,new THREE.MeshStandardMaterial({color:info.c,metalness:0.15,roughness:0.35}));
+        m.scale.setScalar(info.r); m.position.copy(P[i]); root.add(m); (byEl[a.e]=byEl[a.e]||[]).push(m); });
+      const bm=new THREE.MeshStandardMaterial({color:0x9aa0aa,metalness:0.1,roughness:0.6});
+      const cg=new THREE.CylinderGeometry(0.085,0.085,1,20); const up=new THREE.Vector3(0,1,0);
+      geom.bonds.forEach(([i,j])=>{ const a=P[i],b=P[j],mid=a.clone().add(b).multiplyScalar(0.5),len=a.distanceTo(b);
+        const m=new THREE.Mesh(cg,bm); m.position.copy(mid); m.scale.y=len; m.quaternion.setFromUnitVectors(up,b.clone().sub(a).normalize()); root.add(m); });
+      scene.remove(grid); grid=new THREE.GridHelper(radius*6,24,0xc3c7d0,0xd4d7de); grid.position.y=-radius-0.6; scene.add(grid);
+      const dist=radius/Math.sin(Math.PI/8)*1.15; camera.position.set(dist*0.5,dist*0.42,dist*0.85);
+
+      buildInfo(d, canonical, inchikey, formula, counts, geom, pTitle);
+    }
+
+    /* ---------- info tree ---------- */
+    function buildInfo(d, canonical, inchikey, formula, counts, geom, title){
+      const num = (x,p=2)=> (Math.round(x*10**p)/10**p).toString();
+      const barSVG = (frac,color,w=54)=>`<svg class="bar" width="${w}" height="8"><rect class="track" width="${w}" height="8" rx="4"/><rect width="${Math.max(2,Math.min(1,frac)*w).toFixed(1)}" height="8" rx="4" fill="${color}"/></svg>`;
+      const gaugeSVG = v=>{const W=64,x=Math.max(0,Math.min(1,(v+5)/10))*W;return `<svg class="bar" width="${W}" height="12"><rect class="track" y="4" width="${W}" height="4" rx="2"/><line x1="${W/2}" y1="1" x2="${W/2}" y2="11" stroke="#c9ccd4" stroke-width="1"/><circle cx="${x.toFixed(1)}" cy="6" r="4" fill="#2563eb"/></svg>`;};
+      const TIP = {
+        formula:['Molecular formula','The count of each element in one molecule. A compact fingerprint of composition — quick to read, though isomers can share one.'],
+        smiles:['Canonical SMILES','RDKit’s canonical text encoding of the molecular graph — a unique string you can store, search, and share.'],
+        inchi:['InChIKey','A fixed-length hashed identifier derived from the IUPAC InChI. Ideal as a database key.'],
+        exact:['Exact mass','Mass using the most abundant isotope of each atom, in daltons — what a high-resolution mass spectrometer measures.'],
+        mw:['Molar mass','Average molecular weight (natural isotope abundances), g/mol. Converts between grams and moles.'],
+        hbd:['Hydrogen-bond donors','H on N or O that can donate a hydrogen bond. More donors → better solubility, poorer permeability (Lipinski).'],
+        hba:['Hydrogen-bond acceptors','N/O lone pairs that accept a hydrogen bond. Shape solubility and drug-likeness.'],
+        rot:['Rotatable bonds','Single non-ring bonds between heavy atoms — molecular flexibility. Fewer often means better oral bioavailability.'],
+        tpsa:['Topological polar surface area','Surface area (Å²) from polar N/O atoms. Predicts membrane permeability; >140 Å² rarely crosses the gut.'],
+        logp:['LogP (lipophilicity)','Crippen’s octanol–water partition coefficient (log). Positive = fat-loving; drives absorption and distribution.'],
+        rings:['Rings','Number of ring systems (SSSR). Rings add rigidity and are central to most drug scaffolds.'],
+        csp3:['Fraction Csp³','Share of carbons that are sp³. Higher values correlate with better solubility and clinical success.'],
+        heavy:['Heavy atoms','All atoms except hydrogen — a simple size measure.'],
+        atoms:['Atom count','Total atoms including hydrogens.'],
+        elem:e=>[e, ({H:'Caps free valences and takes part in hydrogen bonding.',C:'The backbone element; four-bond versatility builds chains and rings.',O:'Adds polarity and hydrogen-bonding; raises water solubility.',N:'Basic and hydrogen-bonding; found in most drugs.',S:'Larger and polarizable; in many drugs and cofactors.'}[e] || ('Count of '+e+' atoms.'))],
+      };
+      const elName = {H:'Hydrogen',C:'Carbon',O:'Oxygen',N:'Nitrogen',S:'Sulfur',P:'Phosphorus',F:'Fluorine',Cl:'Chlorine',Br:'Bromine',I:'Iodine',B:'Boron'};
+      const elKeys = Object.keys(counts).sort((a,b)=>counts[b]-counts[a]);
+      const maxCount = Math.max(...elKeys.map(k=>counts[k]));
+
+      function chip(o){
+        const c=document.createElement('div'); c.className='ocontent'+(o.el?' el':'');
+        if(o.el){ c.dataset.el=o.el; c.style.setProperty('--dot',o.dot); }
+        if(o.swatch){ const s=document.createElement('span'); s.className='swatch'; if(!o.el) c.style.setProperty('--dot',o.dot); c.appendChild(s); }
+        const v=document.createElement('span'); v.className='oval'+(o.mono?' mono':''); v.textContent=o.val; c.appendChild(v);
+        if(o.label){ const l=document.createElement('span'); l.className='olbl'; l.textContent=o.label; c.appendChild(l); }
+        if(o.svg){ const w=document.createElement('span'); w.innerHTML=o.svg; c.appendChild(w.firstChild); }
+        if(o.tip){ c.dataset.tt=o.tip[0]; c.dataset.td=o.tip[1]; c.style.cursor='help'; }
+        return c;
+      }
+      const nodeOf = ch => { const n=document.createElement('div'); n.className='onode'; const r=document.createElement('div'); r.className='orow'; r.appendChild(ch); n.appendChild(r); return n; };
+
+      const SPEC = [
+        { val:'Identity', children:[
+          { val:formula, label:'Formula', tip:TIP.formula },
+          { val:canonical, mono:true, label:'SMILES', tip:TIP.smiles },
+          { val:inchikey, mono:true, label:'InChIKey', tip:TIP.inchi },
+          { val:'Mass', children:[
+            { val:num(d.exactmw,4), label:'Exact mass', tip:TIP.exact },
+            { val:num(d.amw,2), label:'g/mol', tip:TIP.mw, svg:barSVG(d.amw/500,'#2563eb') } ]},
+        ]},
+        { val:String(geom.atoms.length), label:'Atoms', tip:TIP.atoms, children:
+          elKeys.map(e=>({ el:e, dot:DOT(e), swatch:true, val:String(counts[e]), label:elName[e]||e, tip:TIP.elem(e), svg:barSVG(counts[e]/maxCount, DOT(e)) })) },
+        { val:'Druglikeness', children:[
+          { val:'Lipinski Ro5', tip:['Lipinski’s rule of five','MW ≤ 500, LogP ≤ 5, ≤ 5 donors, ≤ 10 acceptors. Two or more violations predicts poor oral absorption.'], children:[
+            { val:num(d.amw,1), label:'MW ≤ 500', tip:TIP.mw },
+            { val:num(d.CrippenClogP,2), label:'LogP ≤ 5', tip:TIP.logp, svg:gaugeSVG(d.CrippenClogP) },
+            { val:String(d.NumHBD), label:'HBD ≤ 5', tip:TIP.hbd },
+            { val:String(d.NumHBA), label:'HBA ≤ 10', tip:TIP.hba } ]},
+          { val:num(d.tpsa,1), label:'TPSA Å²', tip:TIP.tpsa, svg:barSVG(d.tpsa/140,'#7a4ff2') },
+          { val:String(d.NumRotatableBonds), label:'Rotatable bonds', tip:TIP.rot },
+          { val:num(d.FractionCSP3,2), label:'Fraction Csp³', tip:TIP.csp3, svg:barSVG(d.FractionCSP3,'#4fae9a') },
+          { val:String(d.NumHeavyAtoms), label:'Heavy atoms', tip:TIP.heavy },
+        ]},
+        { val:'Rings & stereo', children:[
+          { val:String(d.NumRings), label:'Rings', tip:TIP.rings },
+          { val:String(d.NumAromaticRings), label:'Aromatic rings', tip:['Aromatic rings','Flat conjugated rings (benzene-like). Add rigidity and π-stacking.'] },
+          { val:String(d.NumAliphaticRings), label:'Aliphatic rings', tip:['Aliphatic rings','Non-aromatic rings — they add 3-D character.'] },
+          { val:String(d.NumHeterocycles), label:'Heterocycles', tip:['Heterocycles','Rings with a non-carbon atom (N, O, S). Very common in drugs.'] },
+          { val:String(d.NumAtomStereoCenters), label:'Stereocenters', tip:['Stereocenters','Atoms not superimposable on their mirror image; each doubles the stereoisomers.'] },
+          { val:String(d.NumSpiroAtoms), label:'Spiro atoms', tip:['Spiro atoms','One atom shared between two rings joined at a point.'] },
+          { val:String(d.NumBridgeheadAtoms), label:'Bridgehead atoms', tip:['Bridgehead atoms','Atoms shared by rings that share more than one bond.'] },
+        ]},
+        { val:'Descriptors', children:[
+          { val:'Crippen', children:[
+            { val:num(d.CrippenClogP,3), label:'LogP', tip:TIP.logp },
+            { val:num(d.CrippenMR,2), label:'Molar refractivity', tip:['Molar refractivity','Roughly molecular volume × polarizability.'] } ]},
+          { val:'Surface', children:[
+            { val:num(d.tpsa,1), label:'TPSA Å²', tip:TIP.tpsa },
+            { val:num(d.labuteASA,1), label:'Labute ASA', tip:['Labute ASA','Approximate accessible surface area (Å²).'] } ]},
+          { val:'Shape κ', tip:['Kappa shape indices','How linear vs. branched vs. cyclic the molecule is.'], children:[
+            { val:num(d.kappa1,2), label:'κ1' }, { val:num(d.kappa2,2), label:'κ2' }, { val:num(d.kappa3,2), label:'κ3' }, { val:num(d.hallKierAlpha,2), label:'Hall–Kier α' } ]},
+          { val:'Connectivity χ', tip:['Chi connectivity indices','Graph descriptors encoding branching and valence, used in QSAR.'], children:[
+            { val:num(d.chi0v,2), label:'χ0v' }, { val:num(d.chi1v,2), label:'χ1v' }, { val:num(d.chi0n,2), label:'χ0n' }, { val:num(d.chi1n,2), label:'χ1n' }, { val:num(d.Phi,2), label:'Φ flexibility' } ]},
+        ]},
+      ];
+      function build(spec){
+        const n=nodeOf(chip(spec));
+        if(spec.children && spec.children.length){ const k=document.createElement('div'); k.className='okids'; spec.children.forEach(cs=>k.appendChild(build(cs))); n.appendChild(k); }
+        return n;
+      }
+      const tree=document.getElementById('tree');
+      tree.innerHTML='<div class="ohead"><span class="otitle"></span></div>';
+      tree.querySelector('.otitle').textContent = title || formula;
+      const body=document.createElement('div'); body.className='obody okids';
+      SPEC.forEach(cs=>body.appendChild(build(cs)));
+      tree.appendChild(body);
+
+      const CARET='<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
+      body.querySelectorAll('.onode').forEach(node=>{
+        const sub=node.querySelector(':scope > .okids'); const c=node.querySelector(':scope > .orow > .ocontent');
+        if(!sub||!c) return; c.classList.add('parent');
+        const caret=document.createElement('span'); caret.className='ocaret'; caret.innerHTML=CARET; c.insertBefore(caret,c.firstChild);
+        node.classList.add('collapsed');
+        c.addEventListener('click', ()=>{ node.classList.toggle('collapsed'); window.__drawTree && window.__drawTree(); });
+      });
+
+      const tip=document.createElement('div'); tip.className='tip'; document.body.appendChild(tip);
+      tree.querySelectorAll('.ocontent[data-tt]').forEach(el=> {
+        el.addEventListener('mouseenter', ()=>{ tip.innerHTML='<span class="tt">'+el.dataset.tt+'</span>'+el.dataset.td;
+          const r=el.getBoundingClientRect(); tip.style.left=(r.right+12)+'px'; tip.style.top=Math.min(r.top,innerHeight-150)+'px'; tip.classList.add('on'); });
+        el.addEventListener('mouseleave', ()=> tip.classList.remove('on'));
+      });
+      tree.querySelectorAll('.ocontent.el').forEach(el=>{ el.addEventListener('mouseenter',()=>hl=el.dataset.el); el.addEventListener('mouseleave',()=>hl=null); });
+      if (window.__drawTree) window.__drawTree();
+    }
   </script>
 
   <script>

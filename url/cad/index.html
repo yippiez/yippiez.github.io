@@ -11,10 +11,14 @@
       user-select: none; -webkit-user-select: none; }
     #view { position: fixed; inset: 0; }
     #view canvas { display: block; }
-    .overlay { position: fixed; top: 24px; left: 24px; z-index: 10; max-height: calc(100vh - 48px); overflow:auto; }
+    .overlay { position: fixed; top: 24px; left: 24px; right: 24px; z-index: 10;
+      max-height: calc(100vh - 48px); overflow-y: auto; overflow-x: hidden;
+      scrollbar-width: none; -ms-overflow-style: none; pointer-events: none; }
+    .overlay::-webkit-scrollbar { width: 0; height: 0; display: none; }
+    .ohead, .ocontent { pointer-events: auto; }
 
     .ocard{ --ts:#2563eb; --ts-soft:#e6edfb;
-      position:relative; font-family:system-ui,sans-serif; color:#1c1c22; width:max-content }
+      position:relative; font-family:system-ui,sans-serif; color:#1c1c22; width:max-content; max-width:100% }
     .otree-edges{position:absolute; top:0; left:0; pointer-events:none; overflow:visible; z-index:0}
     .ohead{ display:inline-flex; align-items:center; gap:.45rem; padding:.22rem .45rem; margin-bottom:.5rem;
       line-height:1; background:rgba(230,237,251,.42); border:1px solid rgba(37,99,235,.7); border-radius:6px;
@@ -44,6 +48,24 @@
       border:1px solid rgba(255,255,255,.12); border-radius:9px; padding:8px 11px;
       box-shadow:0 10px 30px rgba(20,22,30,.28); white-space:pre-wrap}
     .tip.on{opacity:1; transform:translateX(0)}
+
+    /* landing prompt */
+    #landing{position:fixed; inset:0; z-index:30; display:flex; align-items:center; justify-content:center; pointer-events:none}
+    .prompt{pointer-events:auto; width:min(560px,92vw); background:rgba(255,255,255,.72); backdrop-filter:blur(16px);
+      -webkit-backdrop-filter:blur(16px); border:1px solid #dfe2e8; border-radius:18px; padding:22px 22px 18px;
+      box-shadow:0 20px 60px rgba(20,22,30,.18); font-family:system-ui,sans-serif}
+    .ptitle{font-size:18px; font-weight:700; color:#1c1c22}
+    .psub{font-size:13px; color:#6b7280; margin:2px 0 14px}
+    .prompt textarea{width:100%; min-height:120px; font-family:ui-monospace,"SF Mono",monospace; font-size:13px;
+      padding:11px 12px; border:1px solid #dfe2e8; border-radius:10px; resize:vertical; background:#fff; color:#1c1c22; margin-bottom:10px; line-height:1.5}
+    .prow{display:flex; gap:8px; margin-bottom:10px}
+    .prompt input{flex:1; min-width:0; font:inherit; font-size:14px; padding:10px 12px; border:1px solid #dfe2e8; border-radius:10px; background:#fff; color:#1c1c22}
+    #pgo{flex:0 0 auto; border:0; background:#2563eb; color:#fff; font:inherit; font-weight:700; font-size:14px; padding:10px 18px; border-radius:10px; cursor:pointer}
+    #pgo:hover{background:#1d4fd0}
+    .pexlbl{font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#9aa1ad; margin:6px 0 8px}
+    .chips{display:flex; flex-wrap:wrap; gap:7px}
+    .chips button{border:1px solid #e2e4ea; background:#fff; font:inherit; font-size:12.5px; color:#33373f; padding:6px 12px; border-radius:999px; cursor:pointer}
+    .chips button:hover{border-color:#2563eb; color:#2563eb}
   </style>
   <script type="importmap">
   { "imports": {
@@ -72,7 +94,9 @@ difference() {
   translate([-24, 0, 0]) cylinder(h=40, r=4, center=true);
   translate([ 24, 0, 0]) cylinder(h=40, r=4, center=true);
 }`;
-    const src = new URLSearchParams(location.search).get('src') || DEFAULT_SRC;
+    const _q = new URLSearchParams(location.search);
+    const srcParam = _q.get('src'); const titleParam = _q.get('title');
+    const src = srcParam || DEFAULT_SRC;
 
     /* ---------- tokenizer ---------- */
     function tokenize(s){
@@ -238,14 +262,7 @@ difference() {
       return res;
     }
 
-    /* ---------- run ---------- */
-    const ast=parse(src);
-    // top-level assignments (e.g. $fn) then geometry statements
-    const geomNodes=[];
-    for(const st of ast){ if(st.k==='assign'){ vars[st.name]=ev(st.e, {}); } else geomNodes.push(st); }
-    const result=foldUnion(geomNodes.map(n=>evalNode(n, new THREE.Matrix4(), {})).filter(Boolean));
-
-    /* ---------- scene ---------- */
+    /* ---------- scene (always) ---------- */
     const view=document.getElementById('view');
     const renderer=new THREE.WebGLRenderer({antialias:true});
     renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setSize(innerWidth,innerHeight);
@@ -254,27 +271,62 @@ difference() {
     const camera=new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 5000);
     const controls=new OrbitControls(camera, renderer.domElement);
     controls.enableDamping=true; controls.dampingFactor=0.08; controls.autoRotate=true; controls.autoRotateSpeed=1.1;
-
     scene.add(new THREE.HemisphereLight(0xffffff, 0x9098a8, 1.1));
     const dl=new THREE.DirectionalLight(0xffffff,1.7); dl.position.set(60,90,70); scene.add(dl);
     const dl2=new THREE.DirectionalLight(0xffffff,0.5); dl2.position.set(-50,-20,-40); scene.add(dl2);
-
-    if(result){
-      result.geometry.rotateX(-Math.PI/2);   // OpenSCAD Z-up -> Three.js Y-up
-      const mesh=new THREE.Mesh(result.geometry, MAT);
-      const edges=new THREE.LineSegments(new THREE.EdgesGeometry(result.geometry, 25),
-        new THREE.LineBasicMaterial({color:0x4257b2, transparent:true, opacity:0.35}));
-      mesh.add(edges);
-      const box=new THREE.Box3().setFromObject(mesh); const c=box.getCenter(new THREE.Vector3());
-      const size=box.getSize(new THREE.Vector3()); const maxd=Math.max(size.x,size.y,size.z);
-      mesh.position.sub(c); scene.add(mesh);
-      const grid=new THREE.GridHelper(maxd*3, 20, 0xc3c7d0, 0xd4d7de);
-      grid.position.y=-size.y/2 - maxd*0.05; scene.add(grid);
-      camera.position.set(maxd*1.4, maxd*1.15, maxd*1.6);
-      controls.target.set(0,0,0);
-    }
+    let defGrid=new THREE.GridHelper(140,20,0xc3c7d0,0xd4d7de); defGrid.position.y=-26; scene.add(defGrid);
+    camera.position.set(90,72,104); controls.target.set(0,0,0);
     addEventListener('resize', ()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); });
     (function loop(){ controls.update(); renderer.render(scene,camera); requestAnimationFrame(loop); })();
+
+    /* ---------- route ---------- */
+    function run(){
+      if(!srcParam){ landing(); return; }
+      const ast=parse(src);
+      const geomNodes=[];
+      for(const st of ast){ if(st.k==='assign'){ vars[st.name]=ev(st.e,{}); } else geomNodes.push(st); }
+      const result=foldUnion(geomNodes.map(n=>evalNode(n,new THREE.Matrix4(),{})).filter(Boolean));
+      if(result){
+        scene.remove(defGrid);
+        result.geometry.rotateX(-Math.PI/2);   // OpenSCAD Z-up -> Three.js Y-up
+        const mesh=new THREE.Mesh(result.geometry, MAT);
+        const edges=new THREE.LineSegments(new THREE.EdgesGeometry(result.geometry,25), new THREE.LineBasicMaterial({color:0x4257b2,transparent:true,opacity:0.35}));
+        mesh.add(edges);
+        const box=new THREE.Box3().setFromObject(mesh); const cc=box.getCenter(new THREE.Vector3());
+        const size=box.getSize(new THREE.Vector3()); const maxd=Math.max(size.x,size.y,size.z);
+        mesh.position.sub(cc); scene.add(mesh);
+        const grid=new THREE.GridHelper(maxd*3,20,0xc3c7d0,0xd4d7de); grid.position.y=-size.y/2-maxd*0.05; scene.add(grid);
+        camera.position.set(maxd*1.4,maxd*1.15,maxd*1.6);
+      }
+      buildTree(geomNodes, titleParam);
+    }
+
+    /* ---------- landing ---------- */
+    function landing(){
+      const EX=[
+        {name:'Bracket', src:DEFAULT_SRC},
+        {name:'Tube', src:'$fn=48;\ndifference(){\n  cylinder(h=50, r=22, center=true);\n  cylinder(h=51, r=14, center=true);\n}'},
+        {name:'Hemisphere', src:'$fn=48;\ndifference(){\n  sphere(24);\n  translate([0,0,-24]) cube([50,50,48], center=true);\n}'},
+        {name:'Pillar', src:'$fn=6;\nunion(){\n  cylinder(h=12, r=26, center=true);\n  translate([0,0,20]) cylinder(h=28, r=10, center=true);\n}'},
+        {name:'Bolt holes', src:'$fn=32;\ndifference(){\n  cube([70,70,12], center=true);\n  for(i=[0:3]) translate([i*18-27, 0, 0]) cylinder(h=20, r=3.5, center=true);\n}'},
+      ];
+      const esc=s=>s.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+      document.body.insertAdjacentHTML('beforeend', `
+        <div id="landing"><div class="prompt">
+          <div class="ptitle">OpenSCAD viewer</div>
+          <div class="psub">Enter OpenSCAD code, or pick an example.</div>
+          <textarea id="pcode" spellcheck="false" placeholder="$fn=48; difference(){ cube([40,40,10],center=true); cylinder(h=20,r=8,center=true); }"></textarea>
+          <div class="prow">
+            <input id="ptitle" placeholder="title (optional)" autocomplete="off">
+            <button id="pgo">Render →</button>
+          </div>
+          <div class="pexlbl">Examples</div>
+          <div class="chips">${EX.map(o=>`<button data-src="${esc(o.src)}" data-title="${o.name}">${o.name}</button>`).join('')}</div>
+        </div></div>`);
+      const go=(code,title)=>{ const q=new URLSearchParams(); q.set('src',code); if(title) q.set('title',title); location.search=q.toString(); };
+      document.getElementById('pgo').addEventListener('click', ()=>{ const v=document.getElementById('pcode').value.trim(); if(v) go(v, document.getElementById('ptitle').value.trim()); });
+      document.querySelectorAll('.chips button').forEach(b=> b.addEventListener('click', ()=> go(b.dataset.src, b.dataset.title)));
+    }
 
     /* ---------- build the tree overlay from the AST ---------- */
     const LBL={union:'bool',difference:'bool',intersection:'bool',translate:'xform',rotate:'xform',scale:'xform',
@@ -352,36 +404,39 @@ difference() {
       }
       return wrap;
     }
-    const tree=document.getElementById('tree');
-    tree.innerHTML='<div class="ohead"><span class="otitle">model.scad</span></div>';
-    const body=document.createElement('div'); body.className='obody okids';
-    geomNodes.forEach(n=> n.k==='call' && body.appendChild(nodeEl(n)));
-    tree.appendChild(body);
+    function buildTree(geomNodes, title){
+      const tree=document.getElementById('tree');
+      tree.innerHTML='<div class="ohead"><span class="otitle"></span></div>';
+      tree.querySelector('.otitle').textContent = title || 'model.scad';
+      const body=document.createElement('div'); body.className='obody okids';
+      geomNodes.forEach(n=> n.k==='call' && body.appendChild(nodeEl(n)));
+      tree.appendChild(body);
 
-    // collapsible nodes (expanded by default)
-    const CARET='<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
-    body.querySelectorAll('.onode').forEach(node=>{
-      const sub = node.querySelector(':scope > .okids');
-      const c = node.querySelector(':scope > .orow > .ocontent');
-      if(!sub || !c) return;
-      const caret=document.createElement('span'); caret.className='ocaret'; caret.innerHTML=CARET;
-      c.insertBefore(caret, c.firstChild); c.style.cursor='pointer';
-      c.addEventListener('click', ()=>{ node.classList.toggle('collapsed'); window.__drawTree && window.__drawTree(); });
-    });
-    window.__drawTree && window.__drawTree();
-
-    // hover a command -> show its full source code
-    const tip=document.createElement('div'); tip.className='tip'; document.body.appendChild(tip);
-    tree.querySelectorAll('.ocontent[data-code]').forEach(el=>{
-      el.addEventListener('mouseenter', ()=>{
-        tip.textContent = el.getAttribute('data-code');
-        const r = el.getBoundingClientRect();
-        tip.style.left = (r.right + 12) + 'px';
-        tip.style.top  = Math.min(r.top - 2, innerHeight - 60) + 'px';
-        tip.classList.add('on');
+      const CARET='<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
+      body.querySelectorAll('.onode').forEach(node=>{
+        const sub = node.querySelector(':scope > .okids');
+        const c = node.querySelector(':scope > .orow > .ocontent');
+        if(!sub || !c) return;
+        const caret=document.createElement('span'); caret.className='ocaret'; caret.innerHTML=CARET;
+        c.insertBefore(caret, c.firstChild); c.style.cursor='pointer';
+        c.addEventListener('click', ()=>{ node.classList.toggle('collapsed'); window.__drawTree && window.__drawTree(); });
       });
-      el.addEventListener('mouseleave', ()=> tip.classList.remove('on'));
-    });
+      window.__drawTree && window.__drawTree();
+
+      const tip=document.createElement('div'); tip.className='tip'; document.body.appendChild(tip);
+      tree.querySelectorAll('.ocontent[data-code]').forEach(el=>{
+        el.addEventListener('mouseenter', ()=>{
+          tip.textContent = el.getAttribute('data-code');
+          const r = el.getBoundingClientRect();
+          tip.style.left = (r.right + 12) + 'px';
+          tip.style.top  = Math.min(r.top - 2, innerHeight - 60) + 'px';
+          tip.classList.add('on');
+        });
+        el.addEventListener('mouseleave', ()=> tip.classList.remove('on'));
+      });
+    }
+
+    run();
   </script>
 
   <script>
