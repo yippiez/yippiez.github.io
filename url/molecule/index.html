@@ -17,7 +17,7 @@
       position:relative; font-family:system-ui,sans-serif; color:#1c1c22; width:max-content }
     .otree-edges{position:absolute; top:0; left:0; pointer-events:none; overflow:visible; z-index:0}
     .ohead{ display:inline-flex; align-items:center; gap:.45rem; padding:.34rem .55rem; margin-bottom:.6rem;
-      line-height:1; background:var(--ts-soft); border:1px solid var(--ts); border-radius:6px; text-decoration:none; cursor:pointer }
+      line-height:1; background:var(--ts-soft); border:1px solid var(--ts); border-radius:6px; text-decoration:none; cursor:default }
     .otitle{font-size:.8rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--ts); position:relative; top:.055em}
     .ogo{display:inline-flex; color:var(--ts); opacity:.6}
     .ohead:hover .ogo{opacity:1}
@@ -44,10 +44,9 @@
 
   <div class="overlay">
     <div class="ocard">
-      <a class="ohead" href="#" id="head">
+      <div class="ohead">
         <span class="otitle">Ethanol</span>
-        <span class="ogo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
-      </a>
+      </div>
       <div class="obody okids">
         <div class="onode"><div class="orow"><div class="ocontent"><span class="oval">C₂H₆O</span><span class="olbl">Formula</span></div></div></div>
         <div class="onode"><div class="orow"><div class="ocontent"><span class="oval">46.07</span><span class="olbl">g/mol</span>
@@ -137,7 +136,6 @@
       el.addEventListener('mouseenter', ()=> hl = el.dataset.el);
       el.addEventListener('mouseleave', ()=> hl = null);
     });
-    document.getElementById('head').addEventListener('click', e=>{ e.preventDefault(); controls.autoRotate = !controls.autoRotate; });
 
     addEventListener('resize', ()=>{
       camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
