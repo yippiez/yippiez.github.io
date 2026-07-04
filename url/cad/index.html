@@ -35,6 +35,12 @@
     .oico{color:var(--dot); flex:0 0 auto; display:inline-flex}
     .odim,.oval{font-family:ui-monospace,"SF Mono",monospace; font-size:.72rem; font-weight:600; color:#2b2f38; position:relative; top:.04em}
     .olbl{color:#7a7f8a; font-size:.58rem; text-transform:uppercase; letter-spacing:.04em; position:relative; top:.04em}
+    .tip{position:fixed; z-index:50; max-width:340px; pointer-events:none; opacity:0; transform:translateX(-4px);
+      transition:opacity .12s, transform .12s; background:#14161c; color:#e7ebf2;
+      font-family:ui-monospace,"SF Mono",monospace; font-size:12px; line-height:1.45;
+      border:1px solid rgba(255,255,255,.12); border-radius:9px; padding:8px 11px;
+      box-shadow:0 10px 30px rgba(20,22,30,.28); white-space:pre-wrap}
+    .tip.on{opacity:1; transform:translateX(0)}
   </style>
   <script type="importmap">
   { "imports": {
@@ -334,6 +340,7 @@ difference() {
       const row=document.createElement('div'); row.className='orow';
       const chip=document.createElement('div'); chip.className='ocontent hit'; chip.style.setProperty('--dot',dot);
       chip.innerHTML=chipHTML(node, kind);
+      chip.setAttribute('data-code', node.name+'('+fmtArgs(node.args)+')'+(node.children.length?' { … }':''));
       row.appendChild(chip); wrap.appendChild(row);
       if(node.children && node.children.length){
         const kids=document.createElement('div'); kids.className='okids';
@@ -348,6 +355,19 @@ difference() {
     geomNodes.forEach(n=> n.k==='call' && body.appendChild(nodeEl(n)));
     tree.appendChild(body);
     window.__drawTree && window.__drawTree();
+
+    // hover a command -> show its full source code
+    const tip=document.createElement('div'); tip.className='tip'; document.body.appendChild(tip);
+    tree.querySelectorAll('.ocontent[data-code]').forEach(el=>{
+      el.addEventListener('mouseenter', ()=>{
+        tip.textContent = el.getAttribute('data-code');
+        const r = el.getBoundingClientRect();
+        tip.style.left = (r.right + 12) + 'px';
+        tip.style.top  = Math.min(r.top - 2, innerHeight - 60) + 'px';
+        tip.classList.add('on');
+      });
+      el.addEventListener('mouseleave', ()=> tip.classList.remove('on'));
+    });
   </script>
 
   <script>

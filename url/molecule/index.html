@@ -34,6 +34,12 @@
     .olbl{color:#6b6b76; font-size:.78rem; position:relative; top:.055em}
     .swatch{width:9px;height:9px;border-radius:3px;background:var(--dot);flex:0 0 auto}
     .bar{display:block}.track{fill:#eceef2}
+    .tip{position:fixed; z-index:50; max-width:260px; pointer-events:none; opacity:0; transform:translateX(-4px);
+      transition:opacity .12s, transform .12s; background:#fff; color:#3a3f48; font-size:12.5px; line-height:1.5;
+      border:1px solid #e6e6eb; border-radius:11px; padding:10px 13px; box-shadow:0 10px 30px rgba(20,22,30,.18);
+      font-family:system-ui,sans-serif}
+    .tip.on{opacity:1; transform:translateX(0)}
+    .tip .tt{display:block; font-weight:700; color:#1c1c22; margin-bottom:4px; font-size:12.5px}
   </style>
   <script type="importmap">
   { "imports": { "three": "../vendor/three.module.js" } }
@@ -135,6 +141,36 @@
     document.querySelectorAll('.ocontent.el').forEach(el=>{
       el.addEventListener('mouseenter', ()=> hl = el.dataset.el);
       el.addEventListener('mouseleave', ()=> hl = null);
+    });
+
+    // property explanations on hover
+    const EXPLAIN = {
+      'Formula': ['Molecular formula', 'The count of each element in one molecule (here C₂H₆O). A compact fingerprint of composition — quick to read, though different isomers can share the same formula.'],
+      'g/mol': ['Molar mass', 'The mass of one mole (~6.022×10²³ molecules), in grams. Used to convert between grams and moles when weighing out or reacting the compound.'],
+      'SMILES': ['SMILES string', 'A plain-text encoding of the molecular graph. Lets you store, search, and share a structure as a short string that software can parse back into 2D or 3D.'],
+      'Atoms': ['Atom count', 'Total number of atoms in the molecule — a rough proxy for its size and molecular weight.'],
+      'Carbon': ['Carbon', 'The backbone element of organic molecules; its four-bond versatility builds the chains and rings everything else hangs off of.'],
+      'Oxygen': ['Oxygen', 'Adds polarity and hydrogen-bonding. Oxygen groups like the –OH here strongly raise water solubility and drive reactivity.'],
+      'Hydrogen': ['Hydrogen', 'The most abundant atom in most organic molecules; it caps free valences and takes part in hydrogen bonding.'],
+      'H-bond donors': ['Hydrogen-bond donors', 'Groups with an H on N or O that can donate a hydrogen bond. More donors usually means better water solubility but poorer membrane permeability (Lipinski’s rules).'],
+      'H-bond acceptors': ['Hydrogen-bond acceptors', 'N or O atoms with lone pairs that can accept a hydrogen bond. With donors, they shape solubility, binding strength, and drug-likeness.'],
+      'LogP': ['LogP (lipophilicity)', 'The octanol–water partition coefficient on a log scale. Positive = fat-loving, negative = water-loving; it predicts how a molecule is absorbed, distributed, and cleared.'],
+    };
+    const tip = document.createElement('div'); tip.className = 'tip'; document.body.appendChild(tip);
+    function showTip(el, info){
+      tip.innerHTML = '<span class="tt">'+info[0]+'</span>'+info[1];
+      const r = el.getBoundingClientRect();
+      tip.style.left = (r.right + 12) + 'px';
+      tip.style.top  = Math.min(r.top, innerHeight - 150) + 'px';
+      tip.classList.add('on');
+    }
+    const hideTip = ()=> tip.classList.remove('on');
+    document.querySelectorAll('.ocontent').forEach(el=>{
+      const lbl = el.querySelector('.olbl'); if(!lbl) return;
+      const info = EXPLAIN[lbl.textContent.trim()]; if(!info) return;
+      el.style.cursor = 'help';
+      el.addEventListener('mouseenter', ()=> showTip(el, info));
+      el.addEventListener('mouseleave', hideTip);
     });
 
     addEventListener('resize', ()=>{
