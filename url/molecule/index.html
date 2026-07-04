@@ -32,6 +32,11 @@
     .olbl{color:#6b6b76; font-size:.74rem; position:relative; top:.04em}
     .swatch{width:9px;height:9px;border-radius:3px;background:var(--dot);flex:0 0 auto}
     .bar{display:block}.track{fill:#eceef2}
+    .ocaret{display:inline-flex; align-items:center; color:#a2a8b2; margin-right:1px; flex:0 0 auto; transition:transform .15s}
+    .onode:not(.collapsed) > .orow > .ocontent > .ocaret{transform:rotate(90deg)}
+    .onode.collapsed > .okids{display:none}
+    .ocontent.parent{cursor:pointer}
+    .ocontent.parent:hover{border-color:#c9ccd4}
     .tip{position:fixed; z-index:50; max-width:262px; pointer-events:none; opacity:0; transform:translateX(-4px);
       transition:opacity .12s, transform .12s; background:#fff; color:#3a3f48; font-size:12.5px; line-height:1.5;
       border:1px solid #e6e6eb; border-radius:11px; padding:10px 13px; box-shadow:0 10px 30px rgba(20,22,30,.18); font-family:system-ui,sans-serif}
@@ -202,38 +207,92 @@
     tree.innerHTML = '<div class="ohead"><span class="otitle">'+formula+'</span></div>';
     const body = document.createElement('div'); body.className='obody okids';
 
-    // Identity
-    body.appendChild(groupOf(chip({val:'Identity'}), [
-      chip({val:formula, label:'Formula', tip:TIP.formula}),
-      chip({val:canonical, mono:true, label:'SMILES', tip:TIP.smiles}),
-      chip({val:inchikey, mono:true, label:'InChIKey', tip:TIP.inchi}),
-      chip({val:num(d.exactmw,4), label:'Exact mass', tip:TIP.exact}),
-      chip({val:num(d.amw,2), label:'g/mol', tip:TIP.mw, svg:barSVG(d.amw/500,'#2563eb')}),
-    ]));
-
-    // Atoms + element breakdown
+    const elName = {H:'Hydrogen',C:'Carbon',O:'Oxygen',N:'Nitrogen',S:'Sulfur',P:'Phosphorus',F:'Fluorine',Cl:'Chlorine',Br:'Bromine',I:'Iodine',B:'Boron'};
     const elKeys = Object.keys(counts).sort((a,b)=>counts[b]-counts[a]);
     const maxCount = Math.max(...elKeys.map(k=>counts[k]));
-    body.appendChild(groupOf(chip({val:String(geom.atoms.length), label:'Atoms', tip:TIP.atoms}),
-      elKeys.map(e => chip({ el:e, dot:DOT(e), swatch:true, val:String(counts[e]),
-        label:({H:'Hydrogen',C:'Carbon',O:'Oxygen',N:'Nitrogen',S:'Sulfur',P:'Phosphorus',F:'Fluorine',Cl:'Chlorine',Br:'Bromine',I:'Iodine'}[e]||e),
-        tip:TIP.elem(e), svg:barSVG(counts[e]/maxCount, DOT(e)) }))
-    ));
 
-    // Properties (druglike)
-    body.appendChild(groupOf(chip({val:'Properties'}), [
-      chip({val:String(d.NumHBD), label:'H-bond donors', tip:TIP.hbd}),
-      chip({val:String(d.NumHBA), label:'H-bond acceptors', tip:TIP.hba}),
-      chip({val:String(d.NumRotatableBonds), label:'Rotatable bonds', tip:TIP.rot}),
-      chip({val:num(d.tpsa,1), label:'TPSA Å²', tip:TIP.tpsa, svg:barSVG(d.tpsa/140,'#7a4ff2')}),
-      chip({val:num(d.CrippenClogP,2), label:'LogP', tip:TIP.logp, svg:gaugeSVG(d.CrippenClogP)}),
-      chip({val:String(d.NumRings), label:'Rings', tip:TIP.rings}),
-      chip({val:num(d.FractionCSP3,2), label:'Fraction Csp³', tip:TIP.csp3, svg:barSVG(d.FractionCSP3,'#4fae9a')}),
-      chip({val:String(d.NumHeavyAtoms), label:'Heavy atoms', tip:TIP.heavy}),
-    ]));
+    // deep, mostly-collapsed spec
+    const SPEC = [
+      { val:'Identity', children:[
+        { val:formula, label:'Formula', tip:TIP.formula },
+        { val:canonical, mono:true, label:'SMILES', tip:TIP.smiles },
+        { val:inchikey, mono:true, label:'InChIKey', tip:TIP.inchi },
+        { val:'Mass', children:[
+          { val:num(d.exactmw,4), label:'Exact mass', tip:TIP.exact },
+          { val:num(d.amw,2), label:'g/mol', tip:TIP.mw, svg:barSVG(d.amw/500,'#2563eb') },
+        ]},
+      ]},
+      { val:String(geom.atoms.length), label:'Atoms', tip:TIP.atoms, children:
+        elKeys.map(e=>({ el:e, dot:DOT(e), swatch:true, val:String(counts[e]), label:elName[e]||e,
+          tip:TIP.elem(e), svg:barSVG(counts[e]/maxCount, DOT(e)) }))
+      },
+      { val:'Druglikeness', children:[
+        { val:'Lipinski Ro5', tip:['Lipinski’s rule of five','A rough oral-druglikeness filter: MW ≤ 500, LogP ≤ 5, ≤ 5 H-bond donors, ≤ 10 acceptors. Two or more violations predicts poor absorption.'], children:[
+          { val:num(d.amw,1), label:'MW ≤ 500', tip:TIP.mw },
+          { val:num(d.CrippenClogP,2), label:'LogP ≤ 5', tip:TIP.logp, svg:gaugeSVG(d.CrippenClogP) },
+          { val:String(d.NumHBD), label:'HBD ≤ 5', tip:TIP.hbd },
+          { val:String(d.NumHBA), label:'HBA ≤ 10', tip:TIP.hba },
+        ]},
+        { val:num(d.tpsa,1), label:'TPSA Å²', tip:TIP.tpsa, svg:barSVG(d.tpsa/140,'#7a4ff2') },
+        { val:String(d.NumRotatableBonds), label:'Rotatable bonds', tip:TIP.rot },
+        { val:num(d.FractionCSP3,2), label:'Fraction Csp³', tip:TIP.csp3, svg:barSVG(d.FractionCSP3,'#4fae9a') },
+        { val:String(d.NumHeavyAtoms), label:'Heavy atoms', tip:TIP.heavy },
+      ]},
+      { val:'Rings & stereo', children:[
+        { val:String(d.NumRings), label:'Rings', tip:TIP.rings },
+        { val:String(d.NumAromaticRings), label:'Aromatic rings', tip:['Aromatic rings','Flat, conjugated rings (like benzene). They add rigidity and π-stacking, but too many hurt solubility.'] },
+        { val:String(d.NumAliphaticRings), label:'Aliphatic rings', tip:['Aliphatic rings','Non-aromatic (saturated or partly saturated) rings — they add three-dimensional character.'] },
+        { val:String(d.NumHeterocycles), label:'Heterocycles', tip:['Heterocycles','Rings containing at least one non-carbon atom (N, O, S). Extremely common in drug scaffolds.'] },
+        { val:String(d.NumAtomStereoCenters), label:'Stereocenters', tip:['Stereocenters','Atoms whose 3-D arrangement isn’t superimposable on its mirror image; each one doubles the possible stereoisomers.'] },
+        { val:String(d.NumSpiroAtoms), label:'Spiro atoms', tip:['Spiro atoms','A single atom shared between two rings joined at one point — a compact way to add 3-D shape.'] },
+        { val:String(d.NumBridgeheadAtoms), label:'Bridgehead atoms', tip:['Bridgehead atoms','Atoms shared by two rings that share more than one bond (fused or bridged systems).'] },
+      ]},
+      { val:'Descriptors', children:[
+        { val:'Crippen', children:[
+          { val:num(d.CrippenClogP,3), label:'LogP', tip:TIP.logp },
+          { val:num(d.CrippenMR,2), label:'Molar refractivity', tip:['Molar refractivity','Crippen’s MR — roughly molecular volume × polarizability. Tracks dispersion binding and steric bulk.'] },
+        ]},
+        { val:'Surface', children:[
+          { val:num(d.tpsa,1), label:'TPSA Å²', tip:TIP.tpsa },
+          { val:num(d.labuteASA,1), label:'Labute ASA', tip:['Labute ASA','An approximate accessible surface area (Å²) summed from atomic contributions.'] },
+        ]},
+        { val:'Shape κ', tip:['Kappa shape indices','Kier’s κ indices capture how linear vs. branched vs. cyclic a molecule is.'], children:[
+          { val:num(d.kappa1,2), label:'κ1' }, { val:num(d.kappa2,2), label:'κ2' }, { val:num(d.kappa3,2), label:'κ3' },
+          { val:num(d.hallKierAlpha,2), label:'Hall–Kier α' },
+        ]},
+        { val:'Connectivity χ', tip:['Chi connectivity indices','Molecular-graph descriptors encoding branching and valence, widely used in QSAR models.'], children:[
+          { val:num(d.chi0v,2), label:'χ0v' }, { val:num(d.chi1v,2), label:'χ1v' },
+          { val:num(d.chi0n,2), label:'χ0n' }, { val:num(d.chi1n,2), label:'χ1n' },
+          { val:num(d.Phi,2), label:'Φ flexibility' },
+        ]},
+      ]},
+    ];
 
+    function build(spec){
+      const n = nodeOf(chip(spec));
+      if(spec.children && spec.children.length){
+        const k=document.createElement('div'); k.className='okids';
+        spec.children.forEach(cs=> k.appendChild(build(cs)));
+        n.appendChild(k);
+      }
+      return n;
+    }
+    SPEC.forEach(cs=> body.appendChild(build(cs)));
     tree.appendChild(body);
     mol.delete();
+
+    // collapse-by-default with clickable carets
+    const CARET='<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
+    body.querySelectorAll('.onode').forEach(node=>{
+      const sub = node.querySelector(':scope > .okids');
+      const c = node.querySelector(':scope > .orow > .ocontent');
+      if(!sub || !c) return;
+      c.classList.add('parent');
+      const caret=document.createElement('span'); caret.className='ocaret'; caret.innerHTML=CARET;
+      c.insertBefore(caret, c.firstChild);
+      node.classList.add('collapsed');
+      c.addEventListener('click', ()=>{ node.classList.toggle('collapsed'); window.__drawTree && window.__drawTree(); });
+    });
 
     // tooltips
     const tip = document.createElement('div'); tip.className='tip'; document.body.appendChild(tip);
@@ -279,16 +338,17 @@
       var svg=card.querySelector(':scope > .otree-edges');
       if(!svg){svg=document.createElementNS(SVGNS,'svg');svg.setAttribute('class','otree-edges');card.insertBefore(svg,card.firstChild);}
       var cr=card.getBoundingClientRect();
+      function vis(el){return !!(el && el.getClientRects().length);}
       function chipOf(n){return n.querySelector(':scope > .orow > .ocontent');}
       function landing(n){var r=chipOf(n).getBoundingClientRect();return{x:r.left-cr.left,y:r.top-cr.top+r.height/2};}
       function spring(el){var r=el.getBoundingClientRect();return{x:r.left-cr.left+11,y:r.bottom-cr.top};}
       var d='';
-      function link(a,container){var ch=kids(container,'.onode');if(!ch.length)return;var pts=ch.map(landing);
+      function link(a,container){var ch=kids(container,'.onode').filter(function(n){return vis(chipOf(n));});if(!ch.length)return;var pts=ch.map(landing);
         d+='M'+a.x+','+a.y+' V'+pts[pts.length-1].y;
         pts.forEach(function(c){var r=Math.min(8,Math.max(0,c.y-a.y),c.x-a.x);
           d+=' M'+a.x+','+(c.y-r)+' Q'+a.x+','+c.y+' '+(a.x+r)+','+c.y+' H'+c.x;});}
       link(spring(title),body);
-      card.querySelectorAll('.onode').forEach(function(node){var sub=node.querySelector(':scope > .okids');if(sub)link(spring(chipOf(node)),sub);});
+      card.querySelectorAll('.onode').forEach(function(node){var sub=node.querySelector(':scope > .okids');if(sub&&vis(sub))link(spring(chipOf(node)),sub);});
       svg.setAttribute('width',card.offsetWidth);svg.setAttribute('height',card.offsetHeight);
       svg.innerHTML='<path d="'+d+'" fill="none" stroke="#c3c6cf" stroke-width="1.5" stroke-linecap="round"/>';
     }
